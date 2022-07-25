@@ -15,6 +15,12 @@ class Node(BaseModel):
     class Config:
         extra = "allow"
 
+    def __str__(self):
+        return f"<Node='{self.label}'>"
+
+    def __repr__(self):
+        return f"<Node='{self.label}'>"
+
 
 class Edge(BaseModel):
     start: Node
