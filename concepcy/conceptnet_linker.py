@@ -1,16 +1,17 @@
-import os
-from collections import ChainMap, defaultdict
+from collections import ChainMap
 from typing import List, Dict
 
 from request_boost import boosted_requests
 from spacy.language import Language
 from spacy.tokens import Doc, Token
 
+from .utils import ConceptnetParser
+
 
 @Language.factory(
     "concepcy",
     default_config={
-        "url": "https://api.conceptnet.io/c/",
+        "url": "https://api.conceptnet.io/query?node=/c/{lang}/{word}&other=/c/{lang}",
         "relations_of_interest": [
             "RelatedTo",
             "SimilarTo",
@@ -29,27 +30,19 @@ class ConcepCyComponent:
             url: str,
             relations_of_interest: List[str]
     ):
-        self.relations_of_interest = relations_of_interest
-        self.url = os.path.join(url, nlp.lang)
+        self.url = url
+        self.lang = nlp.lang
+        self.parser = ConceptnetParser(relations_of_interest)
+
         Doc.set_extension("concepts", default={})
         Token.set_extension("concepts", default={})
 
     def _make_requests(self, words: List[str]) -> List[Dict]:
         """"""
-        urls = [os.path.join(self.url, word) for word in words]
-        responses = boosted_requests(urls=urls, no_workers=32, max_tries=5, timeout=5, headers=None, parse_json=True)
+        urls = [self.url.format(word=word, lang=self.lang) for word in words]
+        responses = boosted_requests(urls=urls, no_workers=32, max_tries=5, timeout=5, headers=None, parse_json=True,
+                                     verbose=False)
         return responses
-
-    def _parse_response(self, response: Dict) -> Dict[str, Dict[str, List]]:
-        """"""
-        word = response["@id"].split("/")[-1]  # retrieving word
-
-        enrichments = defaultdict(list)
-        for edge in response["edges"]:
-            relation = edge["@id"].split("/")[4]
-            if relation in self.relations_of_interest:
-                enrichments[relation].append({"weight": edge["weight"], "text": edge["surfaceText"]})
-        return {word: enrichments}
 
     def __call__(self, doc: Doc) -> Doc:
         """"""
@@ -59,7 +52,7 @@ class ConcepCyComponent:
                 continue
             words.add(token.lemma_)
         responses = self._make_requests(list(words))
-        enrichments = dict(ChainMap(*map(self._parse_response, responses)))
+        enrichments = dict(ChainMap(*map(self.parser, responses)))
 
         for token in doc:
             if token.is_punct or token.is_stop or token.ent_type != 0:
@@ -78,12 +71,9 @@ if __name__ == "__main__":
 
     s = time.time()
     doc = nlp(
-        """The Jan. 6 select committee’s latest public hearing went inside the White House to detail then-President 
-        Donald Trump’s hourslong refusal to call for an end to the Capitol riot. The hearing marked the final scheduled 
-        presentation of the committee’s initial findings from its investigation of the Jan. 6, 2021, insurrection until 
-        September."""
+        """The Jan. 6 select committee’s latest public hearing went inside the White House to detail then-President Donald Trump’s hourslong refusal to call for an end to the Capitol riot. The hearing marked the final scheduled presentation of the committee’s initial findings from its investigation of the Jan. 6, 2021, insurrection until September."""
     )
     print(time.time() - s)
 
-    for token in doc:
-        print(token._.concepts)
+    # for token in doc:
+    #     print(token._.concepts)
