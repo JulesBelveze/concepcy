@@ -1,5 +1,5 @@
 from collections import ChainMap, defaultdict
-from typing import List, Dict
+from typing import List, Dict, Callable
 
 from request_boost import boosted_requests
 from spacy.language import Language
@@ -18,7 +18,8 @@ from .utils import ConceptnetParser
             "IsA",
             "PartOf",
             "InstanceOf"
-        ]
+        ],
+        "filter_edge_fct": lambda x: x.text is None and x.weight > 2.0
     },
     assigns=["token._.concepts"]
 )
@@ -28,11 +29,13 @@ class ConcepCyComponent:
             nlp: Language,
             name: str,
             url: str,
-            relations_of_interest: List[str]
+            relations_of_interest: List[str],
+            filter_edge_fct: Callable = None,
+            as_dict: bool = False
     ):
         self.url = url
         self.lang = nlp.lang
-        self.parser = ConceptnetParser(relations_of_interest)
+        self.parser = ConceptnetParser(relations_of_interest, as_dict, filter_edge_fct)
 
         for relation in relations_of_interest:
             Doc.set_extension(relation.lower(), default=defaultdict(list))
@@ -59,7 +62,7 @@ class ConcepCyComponent:
         for token in doc:
             if token.is_punct or token.is_stop or token.ent_type != 0:
                 continue
-                
+
             token_enrichments = enrichments[token.lemma_]
             for relation, enrich in token_enrichments.items():
                 token._.get(relation.lower()).extend(enrich)
