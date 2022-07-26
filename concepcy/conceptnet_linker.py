@@ -1,4 +1,4 @@
-from collections import ChainMap
+from collections import ChainMap, defaultdict
 from typing import List, Dict
 
 from request_boost import boosted_requests
@@ -34,8 +34,9 @@ class ConcepCyComponent:
         self.lang = nlp.lang
         self.parser = ConceptnetParser(relations_of_interest)
 
-        Doc.set_extension("concepts", default={})
-        Token.set_extension("concepts", default={})
+        for relation in relations_of_interest:
+            Doc.set_extension(relation.lower(), default=defaultdict(list))
+            Token.set_extension(relation.lower(), default=[])
 
     def _make_requests(self, words: List[str]) -> List[Dict]:
         """"""
@@ -51,29 +52,28 @@ class ConcepCyComponent:
             if token.is_punct or token.is_stop or token.ent_type != 0:
                 continue
             words.add(token.lemma_)
+
         responses = self._make_requests(list(words))
         enrichments = dict(ChainMap(*map(self.parser, responses)))
 
         for token in doc:
             if token.is_punct or token.is_stop or token.ent_type != 0:
                 continue
-            token._.concepts = enrichments[token.lemma_]
+                
+            token_enrichments = enrichments[token.lemma_]
+            for relation, enrich in token_enrichments.items():
+                token._.get(relation.lower()).extend(enrich)
+                doc._.get(relation.lower())[token.text].append(enrich)
 
         return doc
 
 
 if __name__ == "__main__":
     import spacy
-    import time
 
     nlp = spacy.load("en_core_web_sm")
     nlp.add_pipe("concepcy")
 
-    s = time.time()
     doc = nlp(
         """The Jan. 6 select committee’s latest public hearing went inside the White House to detail then-President Donald Trump’s hourslong refusal to call for an end to the Capitol riot. The hearing marked the final scheduled presentation of the committee’s initial findings from its investigation of the Jan. 6, 2021, insurrection until September."""
     )
-    print(time.time() - s)
-
-    # for token in doc:
-    #     print(token._.concepts)
