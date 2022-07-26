@@ -1,6 +1,6 @@
 import re
 from collections import defaultdict
-from typing import List, Dict
+from typing import List, Dict, Union, Callable, Optional
 
 from pydantic import BaseModel, Field
 
@@ -31,10 +31,12 @@ class Edge(BaseModel):
 
 
 class ConceptnetParser:
-    def __init__(self, relations_of_interest: List[str]):
+    def __init__(self, relations_of_interest: List[str], as_dict: bool, filter_edge_fct: Optional[Callable]):
         self.relations = relations_of_interest
+        self.as_dict = as_dict
+        self.filter_edge_fct = filter_edge_fct
 
-    def parse_response(self, response: Dict) -> Dict[str, List[Edge]]:
+    def parse_response(self, response: Dict) -> Dict[str, List[Union[Edge, Dict]]]:
         """"""
         word = re.search(r"/(\w+)&other", response["@id"]).groups()[0]
 
@@ -42,15 +44,22 @@ class ConceptnetParser:
         for edge in response["edges"]:
             relation = edge["@id"].split("/")[4]
             if relation in self.relations:
-                enrichments[relation].append(
-                    Edge(
-                        start=Node(**edge["start"]),
-                        end=Node(**edge["end"]),
-                        relation=relation,
-                        text=edge["surfaceText"],
-                        weight=edge["weight"]
-                    )
+                edge = Edge(
+                    start=Node(**edge["start"]),
+                    end=Node(**edge["end"]),
+                    relation=relation,
+                    text=edge["surfaceText"],
+                    weight=edge["weight"]
                 )
+                if self.filter_edge_fct is not None:
+                    if self.filter_edge_fct(edge):
+                        continue
+
+                if self.as_dict:
+                    edge = edge.dict()
+
+                enrichments[relation].append(edge)
+
         return {word: enrichments}
 
     def __call__(self, response: Dict) -> Dict[str, List[Edge]]:
