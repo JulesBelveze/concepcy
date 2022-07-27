@@ -57,7 +57,7 @@ import concepcy
 nlp = spacy.load("en_core_web_sm")
 nlp.add_pipe("concepcy")
 
-doc = nlp("SpaCy is a lovely of software")
+doc = nlp("WHO is a lovely company")
 
 # Access all the "RelatedTo" relations from the Doc
 print("--- All the 'RelatedTo' relations from the Doc ---")
