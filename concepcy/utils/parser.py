@@ -2,42 +2,33 @@ import re
 from collections import defaultdict
 from typing import List, Dict, Union, Callable, Optional
 
-from pydantic import BaseModel, Field
-
-
-class Node(BaseModel):
-    id: str = Field(alias="@id")
-    type: str = Field(alias="@type")
-    label: str
-    language: str
-    term: str
-
-    class Config:
-        extra = "allow"
-
-    def __str__(self):
-        return f"<Node='{self.label}'>"
-
-    def __repr__(self):
-        return f"<Node='{self.label}'>"
-
-
-class Edge(BaseModel):
-    start: Node
-    end: Node
-    relation: str
-    text: str = None
-    weight: float
+from .types import Node, Edge
 
 
 class ConceptnetParser:
+    """
+    Helper class to parse ConceptNet API responses
+    """
+
     def __init__(self, relations_of_interest: List[str], as_dict: bool, filter_edge_fct: Optional[Callable]):
+        """
+
+        :param relations_of_interest: list of relations to keep
+        :param as_dict: whether to transform `Edge`s into a dict or not
+        :param filter_edge_fct: function to filter out some `Edge`s
+        """
         self.relations = relations_of_interest
         self.as_dict = as_dict
         self.filter_edge_fct = filter_edge_fct
 
     def parse_response(self, response: Dict) -> Dict[str, List[Union[Edge, Dict]]]:
-        """"""
+        """
+        Parses ConceptNet API response
+
+        :param response: ConceptNet API response
+        :return: dictionary with key the relation and value the list of edges corresponding
+                 to that relation
+        """
         word = re.search(r"/(\w+)&other", response["@id"]).groups()[0]
 
         enrichments = defaultdict(list)
@@ -62,5 +53,10 @@ class ConceptnetParser:
 
         return {word: enrichments}
 
-    def __call__(self, response: Dict) -> Dict[str, List[Edge]]:
+    def __call__(self, response: Dict) -> Dict[str, List[Union[Edge, Dict]]]:
+        """
+
+        :param response:
+        :return:
+        """
         return self.parse_response(response)
