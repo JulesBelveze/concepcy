@@ -188,6 +188,14 @@ python-versions = ">=3.6.8"
 diagrams = ["railroad-diagrams", "jinja2"]
 
 [[package]]
+name = "request-boost"
+version = "0.6"
+description = "A better requests and urllib. A simple package for hitting multiple URLs and performing GET/POST requests in parallel."
+category = "main"
+optional = false
+python-versions = "*"
+
+[[package]]
 name = "requests"
 version = "2.28.1"
 description = "Python HTTP for Humans."
@@ -410,7 +418,7 @@ python-versions = "*"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "cfaec2545225c69f7a2bba8d3af4f3ed47f05a371894e0ce31de91ec1627e5b6"
+content-hash = "71e83ff5fdc0431377afbdc8116a3db6aeb282a14183c231a8a534f5efdd7f5d"
 
 [metadata.files]
 blis = []
@@ -431,6 +439,7 @@ pathy = []
 preshed = []
 pydantic = []
 pyparsing = []
+request-boost = []
 requests = []
 smart-open = []
 spacy = []
