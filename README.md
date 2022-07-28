@@ -61,7 +61,7 @@ doc = nlp("WHO is a lovely company")
 
 # Access all the "RelatedTo" relations from the Doc
 print("--- All the 'RelatedTo' relations from the Doc ---")
-for word, relations in doc._.relatedto.keys():
+for word, relations in doc._.relatedto.items():
     print(f"Word: '{word}'\n{relations}")
 
 # Access the "RelatedTo" relations word by word
