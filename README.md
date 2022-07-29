@@ -113,7 +113,9 @@ nlp.add_pipe(
     "concepcy",
     config={
         "relations_of_interest": ["MotivatedByGoal", "CapableOf"],
-        "filter_edge_fct": lambda x: x.weight < 3.0
+        "filter_edge_weight": 3.0,
+        "filter_missing_text": True,
+        "as_dict": False
     }
 )
 ```

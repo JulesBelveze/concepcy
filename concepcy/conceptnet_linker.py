@@ -1,5 +1,5 @@
 from collections import ChainMap, defaultdict
-from typing import List, Dict, Callable
+from typing import List, Dict, Optional
 
 from request_boost import boosted_requests
 from spacy.language import Language
@@ -17,7 +17,9 @@ from .utils import ConceptnetParser
             "SimilarTo",
             "InstanceOf"
         ],
-        "filter_edge_fct": lambda x: x.text is None or x.weight < 4.0
+        "filter_edge_weight": 2,
+        "filter_missing_text": False,
+        "as_dict": True
     }
 )
 class ConcepCyComponent:
@@ -29,8 +31,9 @@ class ConcepCyComponent:
             name: str,
             url: str,
             relations_of_interest: List[str],
-            filter_edge_fct: Callable = None,
-            as_dict: bool = True
+            as_dict: bool,
+            filter_edge_weight: Optional[int] = None,
+            filter_missing_text: Optional[bool] = None
     ):
         """
 
@@ -39,10 +42,15 @@ class ConcepCyComponent:
         :param url: ConceptNet url to query
         :param relations_of_interest: list of relations to keep
         :param as_dict: whether to transform `Edge`s into a dict or not
-        :param filter_edge_fct: function to filter out some `Edge`s
+        :param filter_edge_weight: minimum edge weight
+        :param filter_missing_text: whether to filter edges with missing "surfaceText"
         """
         self.url = url
         self.lang = nlp.lang
+
+        filter_weight = -1 if filter_edge_weight is None else filter_edge_weight
+        text_filter = True if filter_missing_text is None else ~filter_missing_text
+        filter_edge_fct = lambda x: (x.text is None or text_filter) and x.weight < filter_weight
         self.parser = ConceptnetParser(relations_of_interest, as_dict, filter_edge_fct)
 
         for relation in relations_of_interest:
@@ -88,14 +96,3 @@ class ConcepCyComponent:
                 doc._.get(relation.lower())[token.text].extend(enrich)
 
         return doc
-
-
-if __name__ == "__main__":
-    import spacy
-
-    nlp = spacy.load("en_core_web_sm")
-    nlp.add_pipe("concepcy")
-
-    doc = nlp(
-        """The Jan. 6 select committee’s latest public hearing went inside the White House to detail then-President Donald Trump’s hourslong refusal to call for an end to the Capitol riot. The hearing marked the final scheduled presentation of the committee’s initial findings from its investigation of the Jan. 6, 2021, insurrection until September."""
-    )
