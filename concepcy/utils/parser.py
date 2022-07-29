@@ -12,10 +12,13 @@ class ConceptnetParser:
 
     def __init__(self, relations_of_interest: List[str], as_dict: bool, filter_edge_fct: Optional[Callable]):
         """
-
-        :param relations_of_interest: list of relations to keep
-        :param as_dict: whether to transform `Edge`s into a dict or not
-        :param filter_edge_fct: function to filter out some `Edge`s
+        Args:
+            relations_of_interest (List[str]):
+                list of relations to keep
+            as_dict (bool):
+                whether to transform `Edge` objects into a dict
+            filter_edge_fct (Optional[Callable]):
+                function to filter out `Edge`
         """
         self.relations = relations_of_interest
         self.as_dict = as_dict
@@ -25,9 +28,13 @@ class ConceptnetParser:
         """
         Parses ConceptNet API response
 
-        :param response: ConceptNet API response
-        :return: dictionary with key the relation and value the list of edges corresponding
-                 to that relation
+        Args:
+            response (Dict):
+                ConceptNet API response
+        Returns:
+            Dict[str, List[Union[Edge, Dict]]]:
+                dictionary with key the relation and value the list of edges corresponding
+                to that relation
         """
         word = re.search(r"/(\w+)&other", response["@id"]).groups()[0]
 
@@ -55,8 +62,13 @@ class ConceptnetParser:
 
     def __call__(self, response: Dict) -> Dict[str, List[Union[Edge, Dict]]]:
         """
+        Args:
+            response (Dict):
+                response sent by the ConceptNet API
 
-        :param response:
-        :return:
+        Returns:
+            Dict[str, List[Union[Edge, Dict]]]:
+                dictionary with key the relation and value the list of edges corresponding
+                to that relation
         """
         return self.parse_response(response)
