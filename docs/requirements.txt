@@ -1,0 +1,8 @@
+sphinx
+furo
+sphinx-copybutton
+sphinxext-opengraph
+myst-parser
+autodoc_pydantic
+pandoc
+nbsphinx
