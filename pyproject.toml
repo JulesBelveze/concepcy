@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "concepcy"
-version = "0.1.0"
+version = "0.1.1"
 description = "SpaCy wrapper for ConceptNet"
 authors = ["JulesBelveze <jules.belveze@hotmail.fr>"]
 homepage = "https://github.com/JulesBelveze/concepcy"
