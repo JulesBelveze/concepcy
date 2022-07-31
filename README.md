@@ -2,6 +2,9 @@
 
 # concepCy
 
+[![PyPI version](https://badge.fury.io/py/concepCy.svg)](https://pypi.org/project/concepCy/)
+[![github actions docs](https://github.com/JulesBelveze/concepcy/actions/workflows/documentation.yaml/badge.svg)](https://julesbelveze.github.io/concepcy/)
+
 `concepCy` is a spaCy wrapper for [ConceptNet](https://conceptnet.io/), a freely-available semantic network designed to
 help computers understand the meaning of words.
 
@@ -119,6 +122,11 @@ nlp.add_pipe(
     }
 )
 ```
+
+# Documentation 📚
+
+The whole documentation along with design decisions and examples can be
+found [here](https://julesbelveze.github.io/concepcy/).
 
 # References
 
