@@ -67,8 +67,8 @@ class ConcepCyComponent:
         self.parser = ConceptnetParser(relations_of_interest, as_dict, filter_edge_fct)
 
         for relation in relations_of_interest:
-            Doc.set_extension(relation.lower(), default=defaultdict(list))
-            Token.set_extension(relation.lower(), default=[])
+            Doc.set_extension(relation.lower(), default=defaultdict(list), force=True)
+            Token.set_extension(relation.lower(), default=[], force=True)
 
     def make_requests(self, words: List[str]) -> List[Dict]:
         """
