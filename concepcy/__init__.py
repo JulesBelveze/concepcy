@@ -12,28 +12,23 @@ from .utils import ConceptnetParser
     "concepcy",
     default_config={
         "url": "https://api.conceptnet.io/query?node=/c/{lang}/{word}&other=/c/{lang}",
-        "relations_of_interest": [
-            "RelatedTo",
-            "SimilarTo",
-            "InstanceOf"
-        ],
+        "relations_of_interest": ["RelatedTo", "SimilarTo", "InstanceOf"],
         "filter_edge_weight": 2,
         "filter_missing_text": False,
-        "as_dict": True
-    }
+        "as_dict": True,
+    },
 )
 class ConcepCyComponent:
     """ConceptNet component for spaCy pipeline"""
 
     def __init__(
-            self,
-            nlp: Language,
-            name: str,
-            url: str,
-            relations_of_interest: List[str],
-            as_dict: bool,
-            filter_edge_weight: Optional[int] = None,
-            filter_missing_text: Optional[bool] = None
+        self,
+        nlp: Language,
+        url: str,
+        relations_of_interest: List[str],
+        as_dict: bool,
+        filter_edge_weight: Optional[int] = None,
+        filter_missing_text: Optional[bool] = None,
     ):
         """
         Notes:
@@ -43,8 +38,6 @@ class ConcepCyComponent:
         Args:
             nlp (Language):
                 spaCy language object
-            name (str):
-                name of the component
             url (str):
                 base url to use to query the ConceptNet API
             relations_of_interest (List[str]):
@@ -62,8 +55,10 @@ class ConcepCyComponent:
         self.lang = nlp.lang
 
         filter_weight = -1 if filter_edge_weight is None else filter_edge_weight
-        text_filter = True if filter_missing_text is None else ~filter_missing_text
-        filter_edge_fct = lambda x: (x.text is None or text_filter) and x.weight < filter_weight
+        text_filter = True if filter_missing_text is None else not filter_missing_text
+        filter_edge_fct = (
+            lambda x: (x.text is None or text_filter) and x.weight < filter_weight
+        )
         self.parser = ConceptnetParser(relations_of_interest, as_dict, filter_edge_fct)
 
         for relation in relations_of_interest:
@@ -81,8 +76,15 @@ class ConcepCyComponent:
             List[Dict]: responses from the ConceptNet API
         """
         urls = [self.url.format(word=word, lang=self.lang) for word in words]
-        responses = boosted_requests(urls=urls, no_workers=32, max_tries=5, timeout=5, headers=None, parse_json=True,
-                                     verbose=False)
+        responses = boosted_requests(
+            urls=urls,
+            no_workers=32,
+            max_tries=5,
+            timeout=5,
+            headers=None,
+            parse_json=True,
+            verbose=False,
+        )
         return responses
 
     def __call__(self, doc: Doc) -> Doc:
