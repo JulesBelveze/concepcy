@@ -16,9 +16,9 @@ include = [
 ]
 
 [tool.poetry.dependencies]
-python = "^3.8"
-spacy = "^3.3.0"
-pydantic = "^1.9.1"
+python = ">=3.9"
+spacy = "^3.8.7"
+pydantic = "^2.7.0"
 request-boost = "^0.6"
 
 [tool.poetry.dev-dependencies]

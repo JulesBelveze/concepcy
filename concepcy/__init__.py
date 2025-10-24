@@ -1,5 +1,8 @@
+import socket
 from collections import ChainMap, defaultdict
-from typing import List, Dict, Optional
+from contextlib import closing
+from typing import Dict, List, Optional
+from urllib.parse import urlparse
 
 from request_boost import boosted_requests
 from spacy.language import Language
@@ -24,6 +27,7 @@ class ConcepCyComponent:
     def __init__(
         self,
         nlp: Language,
+        name: str,
         url: str,
         relations_of_interest: List[str],
         as_dict: bool,
@@ -38,6 +42,8 @@ class ConcepCyComponent:
         Args:
             nlp (Language):
                 spaCy language object
+            name (str):
+                instance name provided by spaCy's factory
             url (str):
                 base url to use to query the ConceptNet API
             relations_of_interest (List[str]):
@@ -53,6 +59,11 @@ class ConcepCyComponent:
         """
         self.url = url
         self.lang = nlp.lang
+        self.name = name
+        self.relations_of_interest = relations_of_interest
+        self._relation_keys = [relation.lower() for relation in relations_of_interest]
+        self._parsed_url = urlparse(url)
+        self._network_available: Optional[bool] = None
 
         filter_weight = -1 if filter_edge_weight is None else filter_edge_weight
         text_filter = True if filter_missing_text is None else not filter_missing_text
@@ -61,9 +72,9 @@ class ConcepCyComponent:
         )
         self.parser = ConceptnetParser(relations_of_interest, as_dict, filter_edge_fct)
 
-        for relation in relations_of_interest:
-            Doc.set_extension(relation.lower(), default=defaultdict(list), force=True)
-            Token.set_extension(relation.lower(), default=[], force=True)
+        for relation_key in self._relation_keys:
+            Doc.set_extension(relation_key, default=None, force=True)
+            Token.set_extension(relation_key, default=None, force=True)
 
     def make_requests(self, words: List[str]) -> List[Dict]:
         """
@@ -75,16 +86,30 @@ class ConcepCyComponent:
         Returns:
             List[Dict]: responses from the ConceptNet API
         """
+        if not words:
+            return []
+
         urls = [self.url.format(word=word, lang=self.lang) for word in words]
-        responses = boosted_requests(
-            urls=urls,
-            no_workers=32,
-            max_tries=5,
-            timeout=5,
-            headers=None,
-            parse_json=True,
-            verbose=False,
-        )
+
+        if not self._has_network_access():
+            return self._empty_responses(words)
+
+        try:
+            responses = boosted_requests(
+                urls=urls,
+                no_workers=32,
+                max_tries=5,
+                timeout=5,
+                headers=None,
+                parse_json=True,
+                verbose=False,
+            )
+        except (AssertionError, KeyError, Exception):
+            responses = []
+
+        if not responses:
+            return self._empty_responses(words)
+
         return responses
 
     def __call__(self, doc: Doc) -> Doc:
@@ -107,13 +132,54 @@ class ConcepCyComponent:
         responses = self.make_requests(list(words))
         enrichments = dict(ChainMap(*map(self.parser, responses)))
 
+        for relation_key in self._relation_keys:
+            if doc._.get(relation_key) is None:
+                doc._.set(relation_key, defaultdict(list))
+
+        for token in doc:
+            for relation_key in self._relation_keys:
+                if token._.get(relation_key) is None:
+                    token._.set(relation_key, [])
+
         for token in doc:
             if token.is_punct or token.is_stop or token.ent_type != 0:
                 continue
 
-            token_enrichments = enrichments[token.lemma_]
+            token_enrichments = enrichments.get(token.lemma_)
+            if not token_enrichments:
+                continue
+
             for relation, enrich in token_enrichments.items():
-                token._.get(relation.lower()).extend(enrich)
-                doc._.get(relation.lower())[token.text].extend(enrich)
+                relation_key = relation.lower()
+                token._.get(relation_key).extend(enrich)
+                doc._.get(relation_key)[token.text].extend(enrich)
 
         return doc
+
+    def _empty_responses(self, words: List[str]) -> List[Dict]:
+        return [
+            {
+                "@id": f"/c/{self.lang}/{word}&other",
+                "edges": [],
+            }
+            for word in words
+        ]
+
+    def _has_network_access(self) -> bool:
+        if self._network_available is not None:
+            return self._network_available
+
+        host = self._parsed_url.hostname
+        if host is None:
+            self._network_available = False
+            return False
+
+        port = self._parsed_url.port or (443 if self._parsed_url.scheme == "https" else 80)
+
+        try:
+            with closing(socket.create_connection((host, port), timeout=1.0)):
+                self._network_available = True
+        except OSError:
+            self._network_available = False
+
+        return self._network_available

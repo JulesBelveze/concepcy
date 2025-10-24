@@ -1,8 +1,8 @@
 import re
 from collections import defaultdict
-from typing import List, Dict, Union, Callable, Optional
+from typing import Callable, Dict, List, Optional, Union
 
-from .types import Node, Edge
+from .types import Edge, Node
 
 
 class ConceptnetParser:
@@ -36,26 +36,41 @@ class ConceptnetParser:
                 dictionary with key the relation and value the list of edges corresponding
                 to that relation
         """
-        word = re.search(r"/(\w+)&other", response["@id"]).groups()[0]
+        if not response:
+            return {}
+
+        match = re.search(r"/(\w+)&other", response.get("@id", ""))
+        if not match:
+            return {}
+        word = match.group(1)
 
         enrichments = defaultdict(list)
-        for edge in response["edges"]:
-            relation = edge["@id"].split("/")[4]
-            if relation in self.relations:
-                edge = Edge(
-                    start=Node(**edge["start"]),
-                    end=Node(**edge["end"]),
-                    relation=relation,
-                    text=edge["surfaceText"],
-                    weight=edge["weight"]
-                )
-                if self.filter_edge_fct is not None:
-                    if self.filter_edge_fct(edge):
-                        continue
+        for edge_data in response.get("edges", []):
+            relation_id = edge_data.get("@id", "")
+            parts = relation_id.split("/")
+            relation = parts[4] if len(parts) > 4 else None
+            if relation not in self.relations:
+                continue
 
-                if self.as_dict:
-                    edge = edge.dict()
+            start_data = edge_data.get("start")
+            end_data = edge_data.get("end")
+            if not start_data or not end_data:
+                continue
 
+            edge = Edge(
+                start=Node(**start_data),
+                end=Node(**end_data),
+                relation=relation,
+                text=edge_data.get("surfaceText"),
+                weight=edge_data.get("weight", 0.0),
+            )
+
+            if self.filter_edge_fct is not None and self.filter_edge_fct(edge):
+                continue
+
+            if self.as_dict:
+                enrichments[relation].append(edge.model_dump())
+            else:
                 enrichments[relation].append(edge)
 
         return {word: enrichments}

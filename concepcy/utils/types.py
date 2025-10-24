@@ -1,8 +1,12 @@
-from pydantic import BaseModel, Field
+from typing import Optional
+
+from pydantic import BaseModel, Field, ConfigDict
 
 
 class Node(BaseModel):
     """Class representing a Node of ConceptNet which is a word of natural language"""
+
+    model_config = ConfigDict(extra="allow", populate_by_name=True)
 
     id: str = Field(
         alias="@id",
@@ -19,9 +23,6 @@ class Node(BaseModel):
         description="A link to the most general version of this term"
     )
 
-    class Config:
-        extra = "allow"
-
     def __str__(self):
         return f"<Node='{self.label}'>"
 
@@ -31,8 +32,10 @@ class Node(BaseModel):
 
 class Edge(BaseModel):
     """Class representing a ConceptNet's edge which is a relation linking one node to another"""
+    model_config = ConfigDict(extra="allow", populate_by_name=True)
+
     start: Node
     end: Node
     relation: str
-    text: str = None
+    text: Optional[str] = None
     weight: float
